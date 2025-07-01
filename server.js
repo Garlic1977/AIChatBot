@@ -3,11 +3,11 @@ const cors = require('cors');
 const OpenAI = require('openai');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
 // Initialize OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Make sure to add this environment variable in Railway
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 // Middleware
@@ -16,16 +16,16 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'Atomize Chatbot Backend is running!' });
+  res.json({ status: 'Server is running!' });
 });
 
-// Chat endpoint with OpenAI integration
+// Chat endpoint
 app.post('/chat', async (req, res) => {
   try {
     const { message } = req.body;
     
-    if (!message || !message.trim()) {
-      return res.status(400).json({ answer: 'Please provide a message.' });
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
     }
 
     const completion = await openai.chat.completions.create({
@@ -33,35 +33,29 @@ app.post('/chat', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an AI assistant for Atomize RMS, a leading revenue management system for hotels. You help answer questions about hotel revenue management, pricing optimization, demand forecasting, and Atomize's specific features and capabilities. Be helpful, informative, and professional. Keep responses concise but comprehensive."
+          content: "You are a helpful assistant for Atomize RMS. Answer questions about revenue management, hotel pricing, and related topics."
         },
         {
           role: "user",
           content: message
         }
       ],
-      max_tokens: 200,
-      temperature: 0.7,
+      max_tokens: 500
     });
 
-    const aiResponse = completion.choices[0].message.content;
-    res.json({ answer: aiResponse });
-    
+    res.json({
+      answer: completion.choices[0].message.content
+    });
+
   } catch (error) {
-    console.error('OpenAI API Error:', error);
-    
-    // Fallback response if OpenAI fails
-    const fallbackResponses = [
-      `Thanks for asking about "${message}". Atomize RMS offers comprehensive revenue management solutions.`,
-      `Regarding "${message}", Atomize RMS provides advanced pricing optimization tools.`,
-      `For "${message}", our platform includes real-time market analytics and forecasting.`
-    ];
-    
-    const fallbackResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    res.json({ answer: fallbackResponse });
+    console.error('Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process request',
+      details: error.message 
+    });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
